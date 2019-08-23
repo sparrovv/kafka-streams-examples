@@ -1,30 +1,15 @@
-package com.mwrobel.kafkastreams.example3
+package com.mwrobel.kafkastreams.example2
 
 import java.util.Properties
 
 import com.mwrobel.kafkastreams.Topics
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
-import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
-import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.FunSuite
 
-class TopologyWithStateStoreTest extends FunSuite with BeforeAndAfter{
-
-  var testDriver:TopologyTestDriver = _
-  implicit var builder:StreamsBuilder = _
-
-  before {
-    builder = new StreamsBuilder()
-    TopologyWithStateStore.buildTopology()
-    val topology = builder.build()
-    testDriver= setupTestDriver(topology)
-  }
-
-  after {
-    testDriver.close()
-  }
+class SimpleDSLTest extends FunSuite {
 
   def setupTestDriver(topology: Topology) = {
     val config = new Properties()
@@ -37,16 +22,25 @@ class TopologyWithStateStoreTest extends FunSuite with BeforeAndAfter{
   val factory = new ConsumerRecordFactory(Topics.inputTopic, Serdes.String.serializer(), Serdes.String.serializer())
 
   test("testBuildTopology") {
+    // create builder
+    implicit val builder = new StreamsBuilder()
+    // build your app topology
+    MyAppTopology.buildTopology()
+
+    //
+    val topology = builder.build()
+    val testDriver = setupTestDriver(topology)
+
     val consumerRecord = factory.create("some string that we will split by words and filter")
-    val anotherRecord = factory.create("Hey, let's check this string")
-
     testDriver.pipeInput(consumerRecord)
-    testDriver.pipeInput(anotherRecord)
 
-    val store:KeyValueStore[String, Int] = testDriver.getKeyValueStore(MyStore.name)
+    val consumeFunc = () => testDriver.readOutput(
+      Topics.outputTopic, Serdes.String.deserializer(), Serdes.String.deserializer()
+    )
 
-    assert(store.get("string") == 2)
-    assert(store.get("filter") == 1)
+    val output:List[String] = readUntilNoRecords(consumeFunc)
+
+    assert(output == List("string", "filter"))
   }
 
   private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list:List[V] = List()): List[V] = {

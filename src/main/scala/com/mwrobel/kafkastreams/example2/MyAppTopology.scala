@@ -10,12 +10,11 @@ object MyAppTopology {
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
 
-    val textLines: KStream[String, String] = builder.
-      stream[String, String](Topics.inputTopic)
+    val textLines: KStream[String, String] = builder.stream[String, String](Topics.inputTopic)
 
-    val wordCounts  = textLines
+    val wordCounts = textLines
       .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
-      .filter( (_, word) => word.length() > 5)
+      .filter((_, word) => word.length() > 5)
 
     wordCounts.to(Topics.outputTopic)
   }

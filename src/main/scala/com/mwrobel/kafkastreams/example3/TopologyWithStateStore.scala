@@ -8,8 +8,7 @@ import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.state.{KeyValueStore, StoreBuilder, Stores}
 
-
-case class WordDetails(count:Int)
+case class WordDetails(count: Int)
 
 object MyStore {
   val name = "foo"
@@ -20,7 +19,7 @@ object MyStore {
   type MySuperStore = KeyValueStore[String, Int]
 }
 
-class PersistTransformer extends ValueTransformer[String, String]{
+class PersistTransformer extends ValueTransformer[String, String] {
   var myStateStore: MyStore.MySuperStore = _
 
   override def init(context: ProcessorContext): Unit = {
@@ -46,7 +45,7 @@ object TopologyWithStateStore {
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
     // defining a state store
     val storeSupplier = Stores.persistentKeyValueStore(MyStore.name)
-    val storeBuilder = Stores.keyValueStoreBuilder(storeSupplier, MyStore.keySerde, MyStore.valSerde)
+    val storeBuilder  = Stores.keyValueStoreBuilder(storeSupplier, MyStore.keySerde, MyStore.valSerde)
     builder.addStateStore(storeBuilder)
 
     // creating a transfomer that's a part of Processor API
@@ -54,9 +53,10 @@ object TopologyWithStateStore {
       override def get(): ValueTransformer[String, String] = new PersistTransformer()
     }
 
-    builder.stream[String, String](Topics.inputTopic)
+    builder
+      .stream[String, String](Topics.inputTopic)
       .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
-      .filter( (_, word) => word.length() > 5)
+      .filter((_, word) => word.length() > 5)
       .transformValues(transformSupplier, MyStore.name)
   }
 }
