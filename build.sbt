@@ -17,5 +17,6 @@ lazy val root = (project in file("."))
       "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.9.1"
     ),
     scalaVersion := "2.12.7",
-    scalafmtOnCompile := true
+    scalafmtOnCompile := true,
+    Test / parallelExecution := false
   )

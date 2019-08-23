@@ -7,9 +7,22 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
-import org.scalatest.FunSuite
+import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class SimpleDSLTest extends FunSuite {
+class SimpleDSLTest extends FunSuite with BeforeAndAfter {
+  var testDriver: TopologyTestDriver   = _
+  implicit var builder: StreamsBuilder = _
+
+  before {
+    builder = new StreamsBuilder()
+    MyAppTopology.buildTopology()
+    val topology = builder.build()
+    testDriver = setupTestDriver(topology)
+  }
+
+  after {
+    testDriver.close()
+  }
 
   def setupTestDriver(topology: Topology) = {
     val config = new Properties()
@@ -22,15 +35,6 @@ class SimpleDSLTest extends FunSuite {
   val factory = new ConsumerRecordFactory(Topics.inputTopic, Serdes.String.serializer(), Serdes.String.serializer())
 
   test("testBuildTopology") {
-    // create builder
-    implicit val builder = new StreamsBuilder()
-    // build your app topology
-    MyAppTopology.buildTopology()
-
-    //
-    val topology   = builder.build()
-    val testDriver = setupTestDriver(topology)
-
     val consumerRecord = factory.create("some string that we will split by words and filter")
     testDriver.pipeInput(consumerRecord)
 
