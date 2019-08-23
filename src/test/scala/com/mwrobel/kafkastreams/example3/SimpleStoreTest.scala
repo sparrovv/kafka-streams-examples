@@ -10,16 +10,16 @@ import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class SimpleStoreTest extends FunSuite with BeforeAndAfter{
+class SimpleStoreTest extends FunSuite with BeforeAndAfter {
 
-  var testDriver:TopologyTestDriver = _
-  implicit var builder:StreamsBuilder = _
+  var testDriver: TopologyTestDriver   = _
+  implicit var builder: StreamsBuilder = _
 
   before {
     builder = new StreamsBuilder()
     TopologyWithStateStore.buildTopology()
     val topology = builder.build()
-    testDriver= setupTestDriver(topology)
+    testDriver = setupTestDriver(topology)
   }
 
   after {
@@ -38,18 +38,18 @@ class SimpleStoreTest extends FunSuite with BeforeAndAfter{
 
   test("testBuildTopology") {
     val consumerRecord = factory.create("some string that we will split by words and filter")
-    val anotherRecord = factory.create("Hey, let's check this string")
+    val anotherRecord  = factory.create("Hey, let's check this string")
 
     testDriver.pipeInput(consumerRecord)
     testDriver.pipeInput(anotherRecord)
 
-    val store:KeyValueStore[String, Int] = testDriver.getKeyValueStore(MyStore.name)
+    val store: KeyValueStore[String, Int] = testDriver.getKeyValueStore(MyStore.name)
 
     assert(store.get("string") == 2)
     assert(store.get("filter") == 1)
   }
 
-  private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list:List[V] = List()): List[V] = {
+  private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list: List[V] = List()): List[V] = {
     val record: ProducerRecord[K, V] = f()
     if (record == null) {
       list

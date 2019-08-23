@@ -28,22 +28,25 @@ class SimpleDSLTest extends FunSuite {
     MyAppTopology.buildTopology()
 
     //
-    val topology = builder.build()
+    val topology   = builder.build()
     val testDriver = setupTestDriver(topology)
 
     val consumerRecord = factory.create("some string that we will split by words and filter")
     testDriver.pipeInput(consumerRecord)
 
-    val consumeFunc = () => testDriver.readOutput(
-      Topics.outputTopic, Serdes.String.deserializer(), Serdes.String.deserializer()
-    )
+    val consumeFunc = () =>
+      testDriver.readOutput(
+        Topics.outputTopic,
+        Serdes.String.deserializer(),
+        Serdes.String.deserializer()
+      )
 
-    val output:List[String] = readUntilNoRecords(consumeFunc)
+    val output: List[String] = readUntilNoRecords(consumeFunc)
 
     assert(output == List("string", "filter"))
   }
 
-  private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list:List[V] = List()): List[V] = {
+  private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list: List[V] = List()): List[V] = {
     val record: ProducerRecord[K, V] = f()
     if (record == null) {
       list
