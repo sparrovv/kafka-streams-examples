@@ -1,8 +1,8 @@
-package com.mwrobel.kafkastreams.example5
+package com.mwrobel.kafkastreams.example6
 
 import java.util.Properties
 
-import com.mwrobel.kafkastreams.example5.models._
+import com.mwrobel.kafkastreams.example6.models._
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.KeyValueStore
@@ -10,14 +10,14 @@ import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
-class DeduplicationTest extends FunSuite with BeforeAndAfter {
+class SchedulerTest extends FunSuite with BeforeAndAfter {
 
   var testDriver: TopologyTestDriver   = _
   implicit var builder: StreamsBuilder = _
 
   before {
     builder = new StreamsBuilder()
-    TopologyWithStateStore.buildTopology()
+    TopologyWithSchedule.buildTopology()
     val topology = builder.build()
     testDriver = setupTestDriver(topology)
   }
@@ -78,14 +78,14 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
         Serdes.String.deserializer(),
         ContactRequest.serde.deserializer()
       )
-    val result: Seq[ContactRequest] = readUntilNoRecords(consumeFunc)
 
-    assert(result.size == 1)
+    assert(readUntilNoRecords(consumeFunc).size == 0)
 
-    val store: KeyValueStore[String, ContactRequest] = testDriver.getKeyValueStore(ContactRequestsStore.name)
-    val contactRequestInStore                        = Option(store.get(customer.id))
+    testDriver.advanceWallClockTime(11000)
+    assert(readUntilNoRecords(consumeFunc).size == 0)
 
-    assert(result(0).copy(deduplicatedNumber = 1) == contactRequestInStore.get)
+    testDriver.advanceWallClockTime(120000)
+    assert(readUntilNoRecords(consumeFunc).size == 1)
   }
 
   private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list: List[V] = List()): List[V] = {
