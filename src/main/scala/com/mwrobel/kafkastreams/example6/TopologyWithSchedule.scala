@@ -20,7 +20,7 @@ object Topics {
 }
 
 object ContactRequestsStore {
-  val name = "contact_requests"
+  val name = "contact_requests_store"
 
   val keySerde = Serdes.String
   val valSerde = ContactRequest.serde
