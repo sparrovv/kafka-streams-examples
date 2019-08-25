@@ -34,43 +34,45 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
     new TopologyTestDriver(topology, config)
   }
 
-  val customerFactory =
-    new ConsumerRecordFactory(Topics.customerTopic, Serdes.String.serializer(), Customer.serde.serializer())
-  val rfqCreatedFactory =
-    new ConsumerRecordFactory(Topics.rfqCreateTopic, Serdes.String.serializer(), RfqCreatedEvent.serde.serializer())
+  val contactDetailsFactory =
+    new ConsumerRecordFactory(
+      Topics.contactDetails,
+      Serdes.String.serializer(),
+      ContactDetailsEntity.serde.serializer()
+    )
+  val quotesCreattedFactory =
+    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
 
-  val customer = Customer(id = "1", name = "Michal", telephoneNumber = "1")
-  val rfqCreatedEvent1 = RfqCreatedEvent(
+  val contactDetails = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
+  val quotesCreattedEvent1 = QuotesCreated(
     eventId = "xx1",
-    rfqReference = "ref1",
-    customerId = customer.id,
-    quotesNumber = 1,
-    decision = "Yo"
+    reference = "ref1",
+    userId = contactDetails.id,
+    quotesNumber = 1
   )
-  val rfqCreatedEvent2 = RfqCreatedEvent(
+  val quotesCreattedEvent2 = QuotesCreated(
     eventId = "xx2",
-    rfqReference = "ref2",
-    customerId = customer.id,
-    quotesNumber = 3,
-    decision = "Yo"
+    reference = "ref2",
+    userId = contactDetails.id,
+    quotesNumber = 3
   )
 
   test("testBuildTopology") {
-    val consumerRecord = customerFactory.create(Topics.customerTopic, customer.id, customer)
-    val rfqCreatedRecord = rfqCreatedFactory.create(
-      Topics.rfqCreateTopic,
-      rfqCreatedEvent1.eventId,
-      rfqCreatedEvent1
+    val consumerRecord = contactDetailsFactory.create(Topics.contactDetails, contactDetails.id, contactDetails)
+    val quotesCreattedRecord = quotesCreattedFactory.create(
+      Topics.quotesCreated,
+      quotesCreattedEvent1.eventId,
+      quotesCreattedEvent1
     )
-    val rfqCreatedRecord2 = rfqCreatedFactory.create(
-      Topics.rfqCreateTopic,
-      rfqCreatedEvent2.eventId,
-      rfqCreatedEvent2
+    val quotesCreattedRecord2 = quotesCreattedFactory.create(
+      Topics.quotesCreated,
+      quotesCreattedEvent2.eventId,
+      quotesCreattedEvent2
     )
 
     testDriver.pipeInput(consumerRecord)
-    testDriver.pipeInput(rfqCreatedRecord)
-    testDriver.pipeInput(rfqCreatedRecord2)
+    testDriver.pipeInput(quotesCreattedRecord)
+    testDriver.pipeInput(quotesCreattedRecord2)
 
     val consumeFunc = () =>
       testDriver.readOutput(
@@ -83,7 +85,7 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
     assert(result.size == 1)
 
     val store: KeyValueStore[String, ContactRequest] = testDriver.getKeyValueStore(ContactRequestsStore.name)
-    val contactRequestInStore                        = Option(store.get(customer.id))
+    val contactRequestInStore                        = Option(store.get(contactDetails.id))
 
     assert(result(0).copy(deduplicatedNumber = 1) == contactRequestInStore.get)
   }

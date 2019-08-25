@@ -6,19 +6,18 @@ import org.joda.time.DateTime
 trait DomainEvent
 trait DomainEntity
 
-case class Customer(id: String, name: String, telephoneNumber: String) extends DomainEntity
-object Customer {
+case class ContactDetailsEntity(id: String, name: String, telephoneNumber: String) extends DomainEntity
+object ContactDetailsEntity {
   type TelephoneNumber = String
-  val serde: JsonSerde[Customer] = new JsonSerde[Customer]()
+  val serde: JsonSerde[ContactDetailsEntity] = new JsonSerde[ContactDetailsEntity]()
 }
 
-case class RfqCreatedEvent(
+case class QuotesCreated(
     eventId: String,
-    rfqReference: String,
-    customerId: String,
-    quotesNumber: Int,
-    decision: String
+    reference: String,
+    userId: String,
+    quotesNumber: Int
 ) extends DomainEvent
-object RfqCreatedEvent {
-  val serde: JsonSerde[RfqCreatedEvent] = new JsonSerde[RfqCreatedEvent]()
+object QuotesCreated {
+  val serde: JsonSerde[QuotesCreated] = new JsonSerde[QuotesCreated]()
 }

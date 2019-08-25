@@ -4,12 +4,11 @@ import com.mwrobel.kafkastreams.serdes.JsonSerde
 import org.joda.time.DateTime
 
 case class ContactDetails(name: String, telephoneNumber: String)
-
 case class ContactRequest(
     userId: String,
-    rfqDecision: String,
+    quotesNumber: Int,
+    reference: String,
     contactDetails: ContactDetails,
-    scheduledAt: Option[DateTime] = None,
     deduplicatedNumber: Int = 0
 ) {
 

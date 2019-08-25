@@ -5,7 +5,6 @@ import java.util.Properties
 import com.mwrobel.kafkastreams.example6.models._
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
-import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.ConsumerRecordFactory
 import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
 import org.scalatest.{BeforeAndAfter, FunSuite}
@@ -34,43 +33,45 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
     new TopologyTestDriver(topology, config)
   }
 
-  val customerFactory =
-    new ConsumerRecordFactory(Topics.customerTopic, Serdes.String.serializer(), Customer.serde.serializer())
-  val rfqCreatedFactory =
-    new ConsumerRecordFactory(Topics.rfqCreateTopic, Serdes.String.serializer(), RfqCreatedEvent.serde.serializer())
+  val contactDetailsFactory =
+    new ConsumerRecordFactory(
+      Topics.contact_details,
+      Serdes.String.serializer(),
+      ContactDetailsEntity.serde.serializer()
+    )
+  val quotesCreatedFactory =
+    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
 
-  val customer = Customer(id = "1", name = "Michal", telephoneNumber = "1")
-  val rfqCreatedEvent1 = RfqCreatedEvent(
+  val contactDetails = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
+  val quotesCreatedEvent1 = QuotesCreated(
     eventId = "xx1",
-    rfqReference = "ref1",
-    customerId = customer.id,
-    quotesNumber = 1,
-    decision = "Yo"
+    reference = "ref1",
+    userId = contactDetails.id,
+    quotesNumber = 1
   )
-  val rfqCreatedEvent2 = RfqCreatedEvent(
+  val quotesCreatedEvent2 = QuotesCreated(
     eventId = "xx2",
-    rfqReference = "ref2",
-    customerId = customer.id,
-    quotesNumber = 3,
-    decision = "Yo"
+    reference = "ref2",
+    userId = contactDetails.id,
+    quotesNumber = 3
   )
 
   test("testBuildTopology") {
-    val consumerRecord = customerFactory.create(Topics.customerTopic, customer.id, customer)
-    val rfqCreatedRecord = rfqCreatedFactory.create(
-      Topics.rfqCreateTopic,
-      rfqCreatedEvent1.eventId,
-      rfqCreatedEvent1
+    val consumerRecord = contactDetailsFactory.create(Topics.contact_details, contactDetails.id, contactDetails)
+    val quotesCreatedRecord = quotesCreatedFactory.create(
+      Topics.quotesCreated,
+      quotesCreatedEvent1.eventId,
+      quotesCreatedEvent1
     )
-    val rfqCreatedRecord2 = rfqCreatedFactory.create(
-      Topics.rfqCreateTopic,
-      rfqCreatedEvent2.eventId,
-      rfqCreatedEvent2
+    val quotesCreatedRecord2 = quotesCreatedFactory.create(
+      Topics.quotesCreated,
+      quotesCreatedEvent2.eventId,
+      quotesCreatedEvent2
     )
 
     testDriver.pipeInput(consumerRecord)
-    testDriver.pipeInput(rfqCreatedRecord)
-    testDriver.pipeInput(rfqCreatedRecord2)
+    testDriver.pipeInput(quotesCreatedRecord)
+    testDriver.pipeInput(quotesCreatedRecord2)
 
     val consumeFunc = () =>
       testDriver.readOutput(

@@ -39,7 +39,7 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
       ContactDetailsEntity.serde.serializer()
     )
 
-  val rfqCreatedFactory =
+  val quotesCreatedFactory =
     new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
 
   test("testBuildTopology") {
@@ -48,18 +48,19 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
       eventId = "xx",
       reference = "ref1",
       userId = contactDetailsEntity.id,
-      quotesNumber = 1,
+      quotesNumber = 1
     )
 
-    val consumerRecord = contactDetailsFactory.create(Topics.contactDetailsEntity, contactDetailsEntity.id, contactDetailsEntity)
-    val rfqCreatedRecord = rfqCreatedFactory.create(
+    val consumerRecord =
+      contactDetailsFactory.create(Topics.contactDetailsEntity, contactDetailsEntity.id, contactDetailsEntity)
+    val quotesCreatedRecord = quotesCreatedFactory.create(
       Topics.quotesCreated,
       quotesCreated.eventId,
       quotesCreated
     )
 
     testDriver.pipeInput(consumerRecord)
-    testDriver.pipeInput(rfqCreatedRecord)
+    testDriver.pipeInput(quotesCreatedRecord)
 
     val consumeFunc = () =>
       testDriver.readOutput(

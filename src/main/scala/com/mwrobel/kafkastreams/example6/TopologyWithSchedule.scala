@@ -14,9 +14,9 @@ import org.apache.kafka.streams.state.{KeyValueStore, Stores}
 import org.joda.time.{DateTime, DateTimeZone}
 
 object Topics {
-  val customerTopic   = "customers"
+  val contact_details = "contact_details"
   val contactRequests = "contact_requests"
-  val rfqCreateTopic  = "rfq_created"
+  val quotesCreated   = "quotes_created"
 }
 
 object ContactRequestsStore {
@@ -104,8 +104,8 @@ object TopologyWithSchedule extends LazyLogging {
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
     import scala.concurrent.duration
-    implicit val customerSerde       = Customer.serde
-    implicit val rfqCreatedSerde     = RfqCreatedEvent.serde
+    implicit val contactDetailsSerde       = ContactDetailsEntity.serde
+    implicit val quotesCreatedSerde     = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
 
     // setup store
@@ -115,10 +115,10 @@ object TopologyWithSchedule extends LazyLogging {
     builder.addStateStore(storeBuilder)
 
     // source stream processors
-    val customersTable = builder
-      .globalTable[String, Customer](Topics.customerTopic)
-    val rfqCreatedStream = builder
-      .stream[String, RfqCreatedEvent](Topics.rfqCreateTopic)
+    val contactDetailsTable = builder
+      .globalTable[String, ContactDetailsEntity](Topics.contact_details)
+    val quotesCreatedStream = builder
+      .stream[String, QuotesCreated](Topics.quotesCreated)
 
     // creating a transformer that's a part of Processor API
     val deduplicationTransformer = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
@@ -139,9 +139,9 @@ object TopologyWithSchedule extends LazyLogging {
         new ScheduleContactRequests(1000, scheduleSetter)
     }
 
-    rfqCreatedStream
-      .join(customersTable)(
-        (_, rfqCreatedEvent) => rfqCreatedEvent.customerId,
+    quotesCreatedStream
+      .join(contactDetailsTable)(
+        (_, quotesCreatedEvent) => quotesCreatedEvent.userId,
         createContactRequest
       )
       .transformValues(deduplicationTransformer, ContactRequestsStore.name)
@@ -151,10 +151,11 @@ object TopologyWithSchedule extends LazyLogging {
       .to(Topics.contactRequests)
   }
 
-  def createContactRequest(rfqCreatedEvent: RfqCreatedEvent, customer: Customer) =
+  def createContactRequest(quotesCreatedEvent: QuotesCreated, contactDetails: ContactDetailsEntity) =
     ContactRequest(
-      customer.id,
-      rfqCreatedEvent.decision,
-      ContactDetails(customer.name, customer.telephoneNumber)
+      quotesCreatedEvent.userId,
+      quotesCreatedEvent.quotesNumber,
+      quotesCreatedEvent.reference,
+      ContactDetails(contactDetails.name, contactDetails.telephoneNumber)
     )
 }
