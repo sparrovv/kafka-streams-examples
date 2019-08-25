@@ -45,14 +45,18 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
     rfqReference = "ref1",
     customerId = customer.id,
     quotesNumber = 1,
-    decision = "Yo"
+    decision = Quoted//"Yo"
   )
+
+  val x = RfqCreatedEvent.serde.serializer().serialize("x", rfqCreatedEvent1)
+  val ff = new String(x)
+
   val rfqCreatedEvent2 = RfqCreatedEvent(
     eventId = "xx2",
     rfqReference = "ref2",
     customerId = customer.id,
     quotesNumber = 3,
-    decision = "Yo"
+    decision = NotQuoted//"Yo"
   )
 
   test("testBuildTopology") {

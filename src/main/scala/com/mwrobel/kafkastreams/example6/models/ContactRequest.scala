@@ -1,13 +1,13 @@
 package com.mwrobel.kafkastreams.example6.models
 
+import com.fasterxml.jackson.module.scala.JsonScalaEnumeration
 import com.mwrobel.kafkastreams.example6.serdes.JsonSerde
 import org.joda.time.DateTime
 
 case class ContactDetails(name: String, telephoneNumber: String)
-
 case class ContactRequest(
     userId: String,
-    rfqDecision: String,
+    @JsonScalaEnumeration(classOf[DecisionType]) rfqDecision: Decision.Decision,
     contactDetails: ContactDetails,
     scheduledAt: Option[DateTime] = None,
     deduplicatedNumber: Int = 0

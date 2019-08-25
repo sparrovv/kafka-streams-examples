@@ -45,14 +45,14 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
     rfqReference = "ref1",
     customerId = customer.id,
     quotesNumber = 1,
-    decision = "Yo"
+    decision = Decision.Quoted
   )
   val rfqCreatedEvent2 = RfqCreatedEvent(
     eventId = "xx2",
     rfqReference = "ref2",
     customerId = customer.id,
     quotesNumber = 3,
-    decision = "Yo"
+    decision = Decision.Referred
   )
 
   test("testBuildTopology") {

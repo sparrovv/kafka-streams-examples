@@ -9,10 +9,20 @@ import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.kstream.{Transformer, TransformerSupplier, ValueTransformer, ValueTransformerSupplier}
 import org.apache.kafka.streams.processor.{ProcessorContext, PunctuationType, Punctuator}
 import org.apache.kafka.streams.scala.ImplicitConversions._
+import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
 import org.joda.time.{DateTime, DateTimeZone}
 
+object StreamEnricher {
+  implicit def toStreamEnricher[K, V](ks: KStream[K, V]) = new StreamEnricher(ks)
+
+  class StreamEnricher[K, V](kstream: KStream[K, V]) {
+    def notNull: KStream[K, V] = {
+      kstream.filter((_, v) => v != null)
+    }
+  }
+}
 object Topics {
   val customerTopic   = "customers"
   val contactRequests = "contact_requests"
@@ -101,6 +111,7 @@ class ScheduleContactRequests(
 
 object TopologyWithSchedule extends LazyLogging {
   import Serdes._
+  import StreamEnricher._
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
     import scala.concurrent.duration
@@ -114,10 +125,11 @@ object TopologyWithSchedule extends LazyLogging {
       Stores.keyValueStoreBuilder(storeSupplier, ContactRequestsStore.keySerde, ContactRequestsStore.valSerde)
     builder.addStateStore(storeBuilder)
 
+
     // source stream processors
     val customersTable = builder
       .globalTable[String, Customer](Topics.customerTopic)
-    val rfqCreatedStream = builder
+    val rfqCreatedStream: KStream[String, RfqCreatedEvent] = builder
       .stream[String, RfqCreatedEvent](Topics.rfqCreateTopic)
 
     // creating a transformer that's a part of Processor API
@@ -145,9 +157,9 @@ object TopologyWithSchedule extends LazyLogging {
         createContactRequest
       )
       .transformValues(deduplicationTransformer, ContactRequestsStore.name)
-      .filter((_, v) => v != null)
+      .notNull
       .transform(scheduleTransformer, ContactRequestsStore.name)
-      .filter((_, v) => v != null)
+      .notNull
       .to(Topics.contactRequests)
   }
 
