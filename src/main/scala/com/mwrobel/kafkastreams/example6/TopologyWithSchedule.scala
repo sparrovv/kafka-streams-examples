@@ -4,6 +4,7 @@ import java.time
 
 import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example6.models._
+import com.mwrobel.kafkastreams.example6.transformers.{ScheduleContactRequests, StoreAndDeduplicateContactRequests}
 import com.mwrobel.kafkastreams.utils.CloseableResource
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.KeyValue
@@ -13,6 +14,7 @@ import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
 import org.joda.time.{DateTime, DateTimeZone}
+import scala.concurrent.duration._
 
 object ContactRequestsStore {
   val name = "contact_requests_store"
@@ -21,77 +23,6 @@ object ContactRequestsStore {
   val valSerde = ContactRequest.serde
 
   type MySuperStore = KeyValueStore[String, ContactRequest]
-}
-
-class StoreAndDeduplicateContactRequests extends ValueTransformer[ContactRequest, ContactRequest] {
-  var myStateStore: ContactRequestsStore.MySuperStore = _
-
-  override def init(context: ProcessorContext): Unit = {
-    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.MySuperStore]
-  }
-
-  override def transform(value: ContactRequest): ContactRequest = {
-    val updatedContact = Option(myStateStore.get(value.userId))
-      .map { contact =>
-        contact.copy(deduplicatedNumber = contact.deduplicatedNumber + 1)
-      }
-      .getOrElse(value)
-
-    myStateStore.put(updatedContact.userId, updatedContact)
-
-    if (updatedContact.isFresh) {
-      value
-    } else null
-  }
-
-  override def close(): Unit = {}
-}
-
-case class MyPunctuator(context: ProcessorContext, store: ContactRequestsStore.MySuperStore)
-    extends Punctuator
-    with LazyLogging {
-  def punctuate(tstamp: Long): Unit = {
-    val now = new DateTime(tstamp)
-    logger.info(s"Executing punctuator ${now}")
-
-    CloseableResource(store.all()) { record =>
-      while (record.hasNext) {
-        val contactRequest = record.next().value
-        if (contactRequest.isReadyToSend(now)) {
-          this.context.forward(contactRequest.userId, contactRequest)
-        }
-      }
-    }
-  }
-}
-
-class ScheduleContactRequests(
-    val scheduleInterval: Int = 10000,
-    initialScheduleSetter: (ContactRequest) => ContactRequest
-) extends Transformer[String, ContactRequest, KeyValue[String, ContactRequest]]
-    with LazyLogging {
-  var myStateStore: ContactRequestsStore.MySuperStore = _
-  var context: ProcessorContext                       = _
-
-  override def init(context: ProcessorContext): Unit = {
-    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.MySuperStore]
-    this.context = context
-
-    logger.info(s"Setting up schedule")
-
-    context.schedule(
-      time.Duration.ofMillis(scheduleInterval),
-      PunctuationType.WALL_CLOCK_TIME,
-      MyPunctuator(this.context, myStateStore)
-    )
-  }
-
-  override def transform(key: String, value: ContactRequest): KeyValue[String, ContactRequest] = {
-    myStateStore.put(value.userId, initialScheduleSetter(value))
-    null
-  }
-
-  override def close(): Unit = {}
 }
 
 object TopologyWithSchedule extends LazyLogging {
@@ -119,19 +50,10 @@ object TopologyWithSchedule extends LazyLogging {
     val deduplicationTransformer = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
       override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
     }
-    import scala.concurrent.duration._
-    val scheduleSetter = (c: ContactRequest) => {
-      c.copy(
-        scheduledAt = Some(
-          DateTime
-            .now()
-            .plusSeconds(50.seconds.toSeconds.toInt)
-        )
-      )
-    }
+
     val scheduleTransformer = new TransformerSupplier[String, ContactRequest, KeyValue[String, ContactRequest]] {
       override def get(): Transformer[String, ContactRequest, KeyValue[String, ContactRequest]] =
-        new ScheduleContactRequests(1000, scheduleSetter)
+        new ScheduleContactRequests(1000, contactRequestScheduleSetter)
     }
 
     quotesCreatedStream
@@ -144,6 +66,16 @@ object TopologyWithSchedule extends LazyLogging {
       .transform(scheduleTransformer, ContactRequestsStore.name)
       .filter((_, v) => v != null)
       .to(LeadManagementTopics.contactRequests)
+  }
+
+  def contactRequestScheduleSetter(c: ContactRequest): ContactRequest = {
+    c.copy(
+      scheduledAt = Some(
+        DateTime
+          .now()
+          .plusSeconds(50.seconds.toSeconds.toInt)
+      )
+    )
   }
 
   def createContactRequest(quotesCreatedEvent: QuotesCreated, contactDetails: ContactDetailsEntity) =
