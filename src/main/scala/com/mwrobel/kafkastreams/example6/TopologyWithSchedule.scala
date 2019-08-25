@@ -31,24 +31,21 @@ object TopologyWithSchedule extends LazyLogging {
     implicit val quotesCreatedSerde  = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
 
-    // setup store
-    val storeSupplier = Stores.persistentKeyValueStore(ContactRequestsStore.name)
-    val storeBuilder =
-      Stores.keyValueStoreBuilder(storeSupplier, ContactRequestsStore.keySerde, ContactRequestsStore.valSerde)
-    builder.addStateStore(storeBuilder)
-
-    // source stream processors
     val contactDetailsTable = builder
       .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
     val quotesCreatedStream = builder
       .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
 
-    // creating a transformer that's a part of Processor API
+    val storeSupplier = Stores.persistentKeyValueStore(ContactRequestsStore.name)
+    val storeBuilder =
+      Stores.keyValueStoreBuilder(storeSupplier, ContactRequestsStore.keySerde, ContactRequestsStore.valSerde)
+    builder.addStateStore(storeBuilder)
+
     val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
       override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
     }
 
-    val scheduleTransformer = new TransformerSupplier[String, ContactRequest, KeyValue[String, ContactRequest]] {
+    val delayAndSchedule = new TransformerSupplier[String, ContactRequest, KeyValue[String, ContactRequest]] {
       override def get(): Transformer[String, ContactRequest, KeyValue[String, ContactRequest]] =
         new ScheduleContactRequests(1000, contactRequestScheduleSetter)
     }
@@ -60,7 +57,7 @@ object TopologyWithSchedule extends LazyLogging {
       )
       .transformValues(saveAndDeduplicate, ContactRequestsStore.name)
       .filter((_, v) => v != null)
-      .transform(scheduleTransformer, ContactRequestsStore.name)
+      .transform(delayAndSchedule, ContactRequestsStore.name)
       .filter((_, v) => v != null)
       .to(LeadManagementTopics.contactRequests)
   }

@@ -27,6 +27,11 @@ object TopologyWithStateStore extends LazyLogging {
     implicit val quotesCreatedSerde  = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
 
+    val contactDetailsTable = builder
+      .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
+    val quotesCreatedStream = builder
+      .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
+
     val storeSupplier: KeyValueBytesStoreSupplier = Stores.persistentKeyValueStore(ContactRequestsStore.name)
     val storeBuilder: StoreBuilder[KeyValueStore[String, ContactRequest]] = Stores.keyValueStoreBuilder(
       storeSupplier,
@@ -34,11 +39,6 @@ object TopologyWithStateStore extends LazyLogging {
       ContactRequestsStore.valSerde
     )
     builder.addStateStore(storeBuilder)
-
-    val contactDetailsTable = builder
-      .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
-    val quotesCreatedStream = builder
-      .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
 
     val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
       override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
