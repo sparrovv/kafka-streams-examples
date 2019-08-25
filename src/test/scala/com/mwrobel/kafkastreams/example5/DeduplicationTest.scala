@@ -2,6 +2,7 @@ package com.mwrobel.kafkastreams.example5
 
 import java.util.Properties
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example5.models._
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
@@ -36,12 +37,16 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
 
   val contactDetailsFactory =
     new ConsumerRecordFactory(
-      Topics.contactDetails,
+      LeadManagementTopics.contactDetailsEntity,
       Serdes.String.serializer(),
       ContactDetailsEntity.serde.serializer()
     )
   val quotesCreattedFactory =
-    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
+    new ConsumerRecordFactory(
+      LeadManagementTopics.quotesCreated,
+      Serdes.String.serializer(),
+      QuotesCreated.serde.serializer()
+    )
 
   val contactDetails = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
   val quotesCreattedEvent1 = QuotesCreated(
@@ -58,14 +63,15 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
   )
 
   test("testBuildTopology") {
-    val consumerRecord = contactDetailsFactory.create(Topics.contactDetails, contactDetails.id, contactDetails)
+    val consumerRecord =
+      contactDetailsFactory.create(LeadManagementTopics.contactDetailsEntity, contactDetails.id, contactDetails)
     val quotesCreattedRecord = quotesCreattedFactory.create(
-      Topics.quotesCreated,
+      LeadManagementTopics.quotesCreated,
       quotesCreattedEvent1.eventId,
       quotesCreattedEvent1
     )
     val quotesCreattedRecord2 = quotesCreattedFactory.create(
-      Topics.quotesCreated,
+      LeadManagementTopics.quotesCreated,
       quotesCreattedEvent2.eventId,
       quotesCreattedEvent2
     )
@@ -76,7 +82,7 @@ class DeduplicationTest extends FunSuite with BeforeAndAfter {
 
     val consumeFunc = () =>
       testDriver.readOutput(
-        Topics.contactRequests,
+        LeadManagementTopics.contactRequests,
         Serdes.String.deserializer(),
         ContactRequest.serde.deserializer()
       )

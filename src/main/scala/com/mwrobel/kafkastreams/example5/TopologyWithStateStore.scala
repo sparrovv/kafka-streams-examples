@@ -1,5 +1,6 @@
 package com.mwrobel.kafkastreams.example5
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example5.models._
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.kstream.{ValueTransformer, ValueTransformerSupplier}
@@ -7,12 +8,6 @@ import org.apache.kafka.streams.processor.ProcessorContext
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
-
-object Topics {
-  val contactDetails  = "contact_details"
-  val contactRequests = "contact_requests"
-  val quotesCreated   = "quotes_created"
-}
 
 object ContactRequestsStore {
   val name = "contact_requests"
@@ -63,9 +58,9 @@ object TopologyWithStateStore extends LazyLogging {
 
     // source stream processors
     val contactDetailsTable = builder
-      .globalTable[String, ContactDetailsEntity](Topics.contactDetails)
+      .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
     val quotesCreatedStream = builder
-      .stream[String, QuotesCreated](Topics.quotesCreated)
+      .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
 
     // creating a transformer that's a part of Processor API
     val deduplicationTransformer = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
@@ -79,7 +74,7 @@ object TopologyWithStateStore extends LazyLogging {
       )
       .transformValues(deduplicationTransformer, ContactRequestsStore.name)
       .filter((_, v) => v != null)
-      .to(Topics.contactRequests)
+      .to(LeadManagementTopics.contactRequests)
   }
 
   def createContactRequest(quotesCreated: QuotesCreated, contactDetailsEntity: ContactDetailsEntity) =

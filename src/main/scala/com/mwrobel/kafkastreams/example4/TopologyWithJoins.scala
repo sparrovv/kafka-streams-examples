@@ -1,15 +1,10 @@
 package com.mwrobel.kafkastreams.example4
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example4.models._
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
-
-object Topics {
-  val contactDetailsEntity = "users_contact_details"
-  val contactRequests      = "contact_requests"
-  val quotesCreated        = "quotes_created"
-}
 
 object TopologyWithStateStore extends LazyLogging {
   import Serdes._
@@ -20,16 +15,16 @@ object TopologyWithStateStore extends LazyLogging {
     implicit val contactRequestSerde = ContactRequest.serde
 
     val quotesCreated = builder
-      .stream[String, QuotesCreated](Topics.quotesCreated)
+      .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
     val contactDetails = builder
-      .globalTable[String, ContactDetailsEntity](Topics.contactDetailsEntity)
+      .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
 
     quotesCreated
       .join(contactDetails)(
         (_, quotesCreated) => quotesCreated.userId,
         createContactRequest
       )
-      .to(Topics.contactRequests)
+      .to(LeadManagementTopics.contactRequests)
   }
 
   def createContactRequest(quotesCreated: QuotesCreated, contactDetails: ContactDetailsEntity) =

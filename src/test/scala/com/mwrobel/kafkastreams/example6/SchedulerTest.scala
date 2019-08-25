@@ -2,6 +2,7 @@ package com.mwrobel.kafkastreams.example6
 
 import java.util.Properties
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example6.models._
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
@@ -35,12 +36,16 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
 
   val contactDetailsFactory =
     new ConsumerRecordFactory(
-      Topics.contact_details,
+      LeadManagementTopics.contactDetailsEntity,
       Serdes.String.serializer(),
       ContactDetailsEntity.serde.serializer()
     )
   val quotesCreatedFactory =
-    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
+    new ConsumerRecordFactory(
+      LeadManagementTopics.quotesCreated,
+      Serdes.String.serializer(),
+      QuotesCreated.serde.serializer()
+    )
 
   val contactDetails = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
   val quotesCreatedEvent1 = QuotesCreated(
@@ -57,14 +62,15 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
   )
 
   test("testBuildTopology") {
-    val consumerRecord = contactDetailsFactory.create(Topics.contact_details, contactDetails.id, contactDetails)
+    val consumerRecord =
+      contactDetailsFactory.create(LeadManagementTopics.contactDetailsEntity, contactDetails.id, contactDetails)
     val quotesCreatedRecord = quotesCreatedFactory.create(
-      Topics.quotesCreated,
+      LeadManagementTopics.quotesCreated,
       quotesCreatedEvent1.eventId,
       quotesCreatedEvent1
     )
     val quotesCreatedRecord2 = quotesCreatedFactory.create(
-      Topics.quotesCreated,
+      LeadManagementTopics.quotesCreated,
       quotesCreatedEvent2.eventId,
       quotesCreatedEvent2
     )
@@ -75,7 +81,7 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
 
     val consumeFunc = () =>
       testDriver.readOutput(
-        Topics.contactRequests,
+        LeadManagementTopics.contactRequests,
         Serdes.String.deserializer(),
         ContactRequest.serde.deserializer()
       )

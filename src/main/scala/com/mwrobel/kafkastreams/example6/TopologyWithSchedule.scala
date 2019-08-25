@@ -2,6 +2,7 @@ package com.mwrobel.kafkastreams.example6
 
 import java.time
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example6.models._
 import com.mwrobel.kafkastreams.utils.CloseableResource
 import com.typesafe.scalalogging.LazyLogging
@@ -12,12 +13,6 @@ import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
 import org.joda.time.{DateTime, DateTimeZone}
-
-object Topics {
-  val contact_details = "contact_details"
-  val contactRequests = "contact_requests"
-  val quotesCreated   = "quotes_created"
-}
 
 object ContactRequestsStore {
   val name = "contact_requests_store"
@@ -104,8 +99,8 @@ object TopologyWithSchedule extends LazyLogging {
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
     import scala.concurrent.duration
-    implicit val contactDetailsSerde       = ContactDetailsEntity.serde
-    implicit val quotesCreatedSerde     = QuotesCreated.serde
+    implicit val contactDetailsSerde = ContactDetailsEntity.serde
+    implicit val quotesCreatedSerde  = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
 
     // setup store
@@ -116,9 +111,9 @@ object TopologyWithSchedule extends LazyLogging {
 
     // source stream processors
     val contactDetailsTable = builder
-      .globalTable[String, ContactDetailsEntity](Topics.contact_details)
+      .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
     val quotesCreatedStream = builder
-      .stream[String, QuotesCreated](Topics.quotesCreated)
+      .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
 
     // creating a transformer that's a part of Processor API
     val deduplicationTransformer = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
@@ -148,7 +143,7 @@ object TopologyWithSchedule extends LazyLogging {
       .filter((_, v) => v != null)
       .transform(scheduleTransformer, ContactRequestsStore.name)
       .filter((_, v) => v != null)
-      .to(Topics.contactRequests)
+      .to(LeadManagementTopics.contactRequests)
   }
 
   def createContactRequest(quotesCreatedEvent: QuotesCreated, contactDetails: ContactDetailsEntity) =

@@ -2,6 +2,7 @@ package com.mwrobel.kafkastreams.example4
 
 import java.util.Properties
 
+import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example4.models._
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
@@ -34,13 +35,17 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
 
   val contactDetailsFactory =
     new ConsumerRecordFactory(
-      Topics.contactDetailsEntity,
+      LeadManagementTopics.contactDetailsEntity,
       Serdes.String.serializer(),
       ContactDetailsEntity.serde.serializer()
     )
 
   val quotesCreatedFactory =
-    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
+    new ConsumerRecordFactory(
+      LeadManagementTopics.quotesCreated,
+      Serdes.String.serializer(),
+      QuotesCreated.serde.serializer()
+    )
 
   test("testBuildTopology") {
     val contactDetailsEntity = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
@@ -52,9 +57,13 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
     )
 
     val consumerRecord =
-      contactDetailsFactory.create(Topics.contactDetailsEntity, contactDetailsEntity.id, contactDetailsEntity)
+      contactDetailsFactory.create(
+        LeadManagementTopics.contactDetailsEntity,
+        contactDetailsEntity.id,
+        contactDetailsEntity
+      )
     val quotesCreatedRecord = quotesCreatedFactory.create(
-      Topics.quotesCreated,
+      LeadManagementTopics.quotesCreated,
       quotesCreated.eventId,
       quotesCreated
     )
@@ -64,7 +73,7 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
 
     val consumeFunc = () =>
       testDriver.readOutput(
-        Topics.contactRequests,
+        LeadManagementTopics.contactRequests,
         Serdes.String.deserializer(),
         ContactRequest.serde.deserializer()
       )
