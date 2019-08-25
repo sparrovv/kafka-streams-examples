@@ -15,11 +15,11 @@ class ScheduleContactRequests(
     initialScheduleSetter: (ContactRequest) => ContactRequest
 ) extends Transformer[String, ContactRequest, KeyValue[String, ContactRequest]]
     with LazyLogging {
-  var myStateStore: ContactRequestsStore.MySuperStore = _
-  var context: ProcessorContext                       = _
+  var myStateStore: ContactRequestsStore.ContactRequests = _
+  var context: ProcessorContext                          = _
 
   override def init(context: ProcessorContext): Unit = {
-    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.MySuperStore]
+    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.ContactRequests]
     this.context = context
 
     this.context.schedule(

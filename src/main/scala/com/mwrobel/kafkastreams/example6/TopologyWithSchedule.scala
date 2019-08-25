@@ -5,11 +5,9 @@ import java.time
 import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example6.models._
 import com.mwrobel.kafkastreams.example6.transformers.{ScheduleContactRequests, StoreAndDeduplicateContactRequests}
-import com.mwrobel.kafkastreams.utils.CloseableResource
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.kstream.{Transformer, TransformerSupplier, ValueTransformer, ValueTransformerSupplier}
-import org.apache.kafka.streams.processor.{ProcessorContext, PunctuationType, Punctuator}
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
@@ -22,14 +20,13 @@ object ContactRequestsStore {
   val keySerde = Serdes.String
   val valSerde = ContactRequest.serde
 
-  type MySuperStore = KeyValueStore[String, ContactRequest]
+  type ContactRequests = KeyValueStore[String, ContactRequest]
 }
 
 object TopologyWithSchedule extends LazyLogging {
   import Serdes._
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
-    import scala.concurrent.duration
     implicit val contactDetailsSerde = ContactDetailsEntity.serde
     implicit val quotesCreatedSerde  = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
@@ -47,7 +44,7 @@ object TopologyWithSchedule extends LazyLogging {
       .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
 
     // creating a transformer that's a part of Processor API
-    val deduplicationTransformer = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
+    val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
       override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
     }
 
@@ -61,7 +58,7 @@ object TopologyWithSchedule extends LazyLogging {
         (_, quotesCreatedEvent) => quotesCreatedEvent.userId,
         createContactRequest
       )
-      .transformValues(deduplicationTransformer, ContactRequestsStore.name)
+      .transformValues(saveAndDeduplicate, ContactRequestsStore.name)
       .filter((_, v) => v != null)
       .transform(scheduleTransformer, ContactRequestsStore.name)
       .filter((_, v) => v != null)
