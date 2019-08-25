@@ -1,4 +1,4 @@
-package com.mwrobel.kafkastreams.example6.utils
+package com.mwrobel.kafkastreams.utils
 
 object CloseableResource {
   def apply[T <: { def close() }, U](resource: T)(block: T => U): U = {

@@ -6,36 +6,37 @@ import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 
 object Topics {
-  val customerTopic   = "customers"
-  val contactRequests = "contact_requests"
-  val rfqCreateTopic  = "rfq_created"
+  val contactDetailsEntity = "users_contact_details"
+  val contactRequests      = "contact_requests"
+  val quotesCreated        = "quotes_created"
 }
 
 object TopologyWithStateStore extends LazyLogging {
   import Serdes._
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
-    implicit val customerSerde       = Customer.serde
-    implicit val rfqCreatedSerde     = RfqCreatedEvent.serde
+    implicit val contactDetailsSerde = ContactDetailsEntity.serde
+    implicit val quotesCreatedSerde  = QuotesCreated.serde
     implicit val contactRequestSerde = ContactRequest.serde
 
-    val customersTable = builder
-      .globalTable[String, Customer](Topics.customerTopic)
-    val rfqCreatedStream = builder
-      .stream[String, RfqCreatedEvent](Topics.rfqCreateTopic)
+    val quotesCreated = builder
+      .stream[String, QuotesCreated](Topics.quotesCreated)
+    val contactDetails = builder
+      .globalTable[String, ContactDetailsEntity](Topics.contactDetailsEntity)
 
-    rfqCreatedStream
-      .join(customersTable)(
-        (_, rfqCreatedEvent) => rfqCreatedEvent.customerId,
+    quotesCreated
+      .join(contactDetails)(
+        (_, quotesCreated) => quotesCreated.userId,
         createContactRequest
       )
       .to(Topics.contactRequests)
   }
 
-  def createContactRequest(rfqCreatedEvent: RfqCreatedEvent, customer: Customer) =
+  def createContactRequest(quotesCreated: QuotesCreated, contactDetails: ContactDetailsEntity) =
     ContactRequest(
-      customer.id,
-      rfqCreatedEvent.decision,
-      ContactDetails(customer.name, customer.telephoneNumber)
+      contactDetails.id,
+      quotesCreated.quotesNumber,
+      quotesCreated.reference,
+      ContactDetails(contactDetails.name, contactDetails.telephoneNumber)
     )
 }

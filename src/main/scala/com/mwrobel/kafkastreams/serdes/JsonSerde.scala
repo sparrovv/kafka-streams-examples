@@ -1,8 +1,8 @@
-package com.mwrobel.kafkastreams.example4.serdes
+package com.mwrobel.kafkastreams.serdes
 
 import java.util
 
-import com.mwrobel.kafkastreams.example4.utils.JsonUtil
+import com.mwrobel.kafkastreams.utils.JsonUtil
 import org.apache.kafka.common.serialization.{Deserializer, Serde, Serializer}
 
 import scala.reflect.ClassTag

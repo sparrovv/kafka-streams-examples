@@ -10,7 +10,6 @@ import org.apache.kafka.streams.{StreamsConfig, Topology, TopologyTestDriver}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 class JoinsTest extends FunSuite with BeforeAndAfter {
-
   var testDriver: TopologyTestDriver   = _
   implicit var builder: StreamsBuilder = _
 
@@ -33,26 +32,30 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
     new TopologyTestDriver(topology, config)
   }
 
-  val customerFactory =
-    new ConsumerRecordFactory(Topics.customerTopic, Serdes.String.serializer(), Customer.serde.serializer())
-  val rfqCreatedFactory =
-    new ConsumerRecordFactory(Topics.rfqCreateTopic, Serdes.String.serializer(), RfqCreatedEvent.serde.serializer())
-
-  test("testBuildTopology") {
-    val customer = Customer(id = "1", name = "Michal", telephoneNumber = "1")
-    val rfqCreatedEvent = RfqCreatedEvent(
-      eventId = "xx",
-      rfqReference = "ref1",
-      customerId = customer.id,
-      quotesNumber = 1,
-      decision = "Yo"
+  val contactDetailsFactory =
+    new ConsumerRecordFactory(
+      Topics.contactDetailsEntity,
+      Serdes.String.serializer(),
+      ContactDetailsEntity.serde.serializer()
     )
 
-    val consumerRecord = customerFactory.create(Topics.customerTopic, customer.id, customer)
+  val rfqCreatedFactory =
+    new ConsumerRecordFactory(Topics.quotesCreated, Serdes.String.serializer(), QuotesCreated.serde.serializer())
+
+  test("testBuildTopology") {
+    val contactDetailsEntity = ContactDetailsEntity(id = "1", name = "Michal", telephoneNumber = "1")
+    val quotesCreated = QuotesCreated(
+      eventId = "xx",
+      reference = "ref1",
+      userId = contactDetailsEntity.id,
+      quotesNumber = 1,
+    )
+
+    val consumerRecord = contactDetailsFactory.create(Topics.contactDetailsEntity, contactDetailsEntity.id, contactDetailsEntity)
     val rfqCreatedRecord = rfqCreatedFactory.create(
-      Topics.rfqCreateTopic,
-      rfqCreatedEvent.eventId,
-      rfqCreatedEvent
+      Topics.quotesCreated,
+      quotesCreated.eventId,
+      quotesCreated
     )
 
     testDriver.pipeInput(consumerRecord)
@@ -67,8 +70,6 @@ class JoinsTest extends FunSuite with BeforeAndAfter {
     val result: Seq[ContactRequest] = readUntilNoRecords(consumeFunc)
 
     assert(result.size == 1)
-//    val expectedContact
-//    assert(result(0) == ContactRequest())
   }
 
   private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list: List[V] = List()): List[V] = {

@@ -3,7 +3,7 @@ package com.mwrobel.kafkastreams.example6
 import java.time
 
 import com.mwrobel.kafkastreams.example6.models._
-import com.mwrobel.kafkastreams.example6.utils.CloseableResource
+import com.mwrobel.kafkastreams.utils.CloseableResource
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.kstream.{Transformer, TransformerSupplier, ValueTransformer, ValueTransformerSupplier}

@@ -1,14 +1,13 @@
 package com.mwrobel.kafkastreams.example4.models
 
-import com.mwrobel.kafkastreams.example4.serdes.JsonSerde
-import org.joda.time.DateTime
+import com.mwrobel.kafkastreams.serdes.JsonSerde
 
 case class ContactDetails(name: String, telephoneNumber: String)
 case class ContactRequest(
     userId: String,
-    rfqDecision: String,
-    contactDetails: ContactDetails,
-    scheduledAt: Option[DateTime] = None
+    quotesNumber: Int,
+    reference: String,
+    contactDetails: ContactDetails
 )
 
 object ContactRequest {

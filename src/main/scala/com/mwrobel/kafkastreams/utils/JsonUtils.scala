@@ -1,4 +1,4 @@
-package com.mwrobel.kafkastreams.example6.utils
+package com.mwrobel.kafkastreams.utils
 
 import java.text.SimpleDateFormat
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL

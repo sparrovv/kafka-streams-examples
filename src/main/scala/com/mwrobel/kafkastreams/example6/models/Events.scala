@@ -1,6 +1,6 @@
 package com.mwrobel.kafkastreams.example6.models
 
-import com.mwrobel.kafkastreams.example6.serdes.JsonSerde
+import com.mwrobel.kafkastreams.serdes.JsonSerde
 import org.joda.time.DateTime
 
 trait DomainEvent
