@@ -10,30 +10,30 @@ import org.apache.kafka.streams.kstream.Transformer
 import org.apache.kafka.streams.processor.{ProcessorContext, PunctuationType, Punctuator}
 import org.joda.time.DateTime
 
-class ScheduleContactRequests(
-    val scheduleInterval: Int = 10000,
-    initialScheduleSetter: (ContactRequest) => ContactRequest
-) extends Transformer[String, ContactRequest, KeyValue[String, ContactRequest]]
+case class ScheduleContactRequests(scheduleInterval: Int = 10000, scheduledAtSetter: (ContactRequest) => ContactRequest)
+    extends Transformer[String, ContactRequest, KeyValue[String, ContactRequest]]
     with LazyLogging {
-  var myStateStore: ContactRequestsStore.ContactRequests = _
-  var context: ProcessorContext                          = _
+  var contactRequestsStore: ContactRequestsStore.ContactRequests = _
 
   override def init(context: ProcessorContext): Unit = {
-    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.ContactRequests]
-    this.context = context
+    contactRequestsStore =
+      context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.ContactRequests]
 
-    this.context.schedule(
+    context.schedule(
       time.Duration.ofMillis(scheduleInterval),
       PunctuationType.WALL_CLOCK_TIME,
-      (tstamp: Long) => {
-        val now = new DateTime(tstamp)
+      (timestamp: Long) => {
+        val now = new DateTime(timestamp)
 
-        CloseableResource(myStateStore.all()) { record =>
+        CloseableResource(contactRequestsStore.all()) { record =>
           while (record.hasNext) {
             val contactRequest = record.next().value
 
             if (contactRequest.isReadyToSend(now)) {
-              this.context.forward(contactRequest.userId, contactRequest)
+              val updatedContactRequest = contactRequest.copy(forwarded = true)
+              contactRequestsStore.put(updatedContactRequest.userId, updatedContactRequest)
+
+              context.forward(updatedContactRequest.userId, updatedContactRequest)
             }
           }
         }
@@ -42,7 +42,7 @@ class ScheduleContactRequests(
   }
 
   override def transform(key: String, value: ContactRequest): KeyValue[String, ContactRequest] = {
-    myStateStore.put(value.userId, initialScheduleSetter(value))
+    contactRequestsStore.put(value.userId, scheduledAtSetter(value))
 
     null
   }

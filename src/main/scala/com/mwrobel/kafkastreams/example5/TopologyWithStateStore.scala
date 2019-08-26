@@ -41,7 +41,8 @@ object TopologyWithStateStore extends LazyLogging {
     builder.addStateStore(storeBuilder)
 
     val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
-      override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
+      override def get(): ValueTransformer[ContactRequest, ContactRequest] =
+        new StoreAndDeduplicateContactRequests()
     }
 
     quotesCreatedStream

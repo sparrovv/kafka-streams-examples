@@ -10,11 +10,11 @@ case class ContactRequest(
     reference: String,
     contactDetails: ContactDetails,
     deduplicatedNumber: Int = 0,
-    scheduledAt: Option[DateTime] = None
+    scheduledAt: Option[DateTime] = None,
+    forwarded: Boolean = false
 ) {
-
   def isFresh: Boolean                      = deduplicatedNumber == 0
-  def isReadyToSend(now: DateTime): Boolean = scheduledAt.map(_.isBefore(now.toInstant)).getOrElse(false)
+  def isReadyToSend(now: DateTime): Boolean = !forwarded && scheduledAt.map(_.isBefore(now.toInstant)).getOrElse(false)
 }
 
 object ContactRequest {

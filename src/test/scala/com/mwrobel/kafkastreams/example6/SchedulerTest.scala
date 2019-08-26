@@ -93,6 +93,9 @@ class SchedulerTest extends FunSuite with BeforeAndAfter {
 
     testDriver.advanceWallClockTime(120000)
     assert(readUntilNoRecords(consumeFunc).size == 1)
+
+    testDriver.advanceWallClockTime(120000)
+    assert(readUntilNoRecords(consumeFunc).size == 0)
   }
 
   private def readUntilNoRecords[K, V](f: () => ProducerRecord[K, V], list: List[V] = List()): List[V] = {
