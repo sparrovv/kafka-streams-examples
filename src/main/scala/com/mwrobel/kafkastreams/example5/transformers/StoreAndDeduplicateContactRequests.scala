@@ -9,7 +9,8 @@ class StoreAndDeduplicateContactRequests extends ValueTransformer[ContactRequest
   var myStateStore: ContactRequestsStore.ContactRequests = _
 
   override def init(context: ProcessorContext): Unit = {
-    myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.ContactRequests]
+    myStateStore = context.getStateStore(ContactRequestsStore.name)
+      .asInstanceOf[ContactRequestsStore.ContactRequests]
   }
 
   override def transform(value: ContactRequest): Option[ContactRequest] = {
