@@ -24,7 +24,7 @@ object ContactRequestsStore {
 
   object Enrichments {
     implicit class ContactRequestScheduleStorageEnrichments(val contactRequestsStore: ContactRequests) {
-      def upsertContactRequest(contactRequest: ContactRequest) = {
+      def upsert(contactRequest: ContactRequest) = {
         contactRequestsStore.put(contactRequest.userId, contactRequest)
       }
 

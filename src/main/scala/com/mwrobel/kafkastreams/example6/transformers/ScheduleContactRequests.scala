@@ -29,7 +29,7 @@ case class ScheduleContactRequests(scheduleInterval: Int = 10000, setScheduledAt
         contactRequestsStore.foreach { contactRequest =>
           if (contactRequest.isReadyToSend(now)) {
             val updatedContactRequest = contactRequest.copy(forwarded = true)
-            contactRequestsStore.upsertContactRequest(updatedContactRequest)
+            contactRequestsStore.upsert(updatedContactRequest)
 
             context.forward(updatedContactRequest.userId, updatedContactRequest)
           }
@@ -39,7 +39,7 @@ case class ScheduleContactRequests(scheduleInterval: Int = 10000, setScheduledAt
   }
 
   override def transform(key: String, value: ContactRequest): KeyValue[String, ContactRequest] = {
-    contactRequestsStore.upsertContactRequest(setScheduledAt(value))
+    contactRequestsStore.upsert(setScheduledAt(value))
 
     null
   }
