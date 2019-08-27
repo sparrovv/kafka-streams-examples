@@ -40,8 +40,8 @@ object TopologyWithStateStore extends LazyLogging {
     )
     builder.addStateStore(storeBuilder)
 
-    val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
-      override def get(): ValueTransformer[ContactRequest, ContactRequest] =
+    val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, Option[ContactRequest]] {
+      override def get(): ValueTransformer[ContactRequest, Option[ContactRequest]] =
         new StoreAndDeduplicateContactRequests()
     }
 
@@ -51,7 +51,7 @@ object TopologyWithStateStore extends LazyLogging {
         createContactRequest
       )
       .transformValues(saveAndDeduplicate, ContactRequestsStore.name)
-      .filter((_, v) => v != null)
+      .flatMapValues(v => v)
       .to(LeadManagementTopics.contactRequests)
   }
 

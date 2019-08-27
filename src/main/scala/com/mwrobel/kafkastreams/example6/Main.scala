@@ -3,7 +3,6 @@ package com.mwrobel.kafkastreams.example6
 import java.time.Duration
 import java.util.Properties
 
-import com.mwrobel.kafkastreams.example1.Main.{builder, logger}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}

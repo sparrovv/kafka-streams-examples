@@ -5,14 +5,14 @@ import com.mwrobel.kafkastreams.example6.models.ContactRequest
 import org.apache.kafka.streams.kstream.ValueTransformer
 import org.apache.kafka.streams.processor.ProcessorContext
 
-class StoreAndDeduplicateContactRequests extends ValueTransformer[ContactRequest, ContactRequest] {
+class StoreAndDeduplicateContactRequests extends ValueTransformer[ContactRequest, Option[ContactRequest]] {
   var myStateStore: ContactRequestsStore.ContactRequests = _
 
   override def init(context: ProcessorContext): Unit = {
     myStateStore = context.getStateStore(ContactRequestsStore.name).asInstanceOf[ContactRequestsStore.ContactRequests]
   }
 
-  override def transform(value: ContactRequest): ContactRequest = {
+  override def transform(value: ContactRequest): Option[ContactRequest] = {
     val updatedContact = Option(myStateStore.get(value.userId))
       .map { contact =>
         contact.copy(deduplicatedNumber = contact.deduplicatedNumber + 1)
@@ -22,8 +22,8 @@ class StoreAndDeduplicateContactRequests extends ValueTransformer[ContactRequest
     myStateStore.put(updatedContact.userId, updatedContact)
 
     if (updatedContact.isFresh) {
-      value
-    } else null
+      Some(value)
+    } else None
   }
 
   override def close(): Unit = {}

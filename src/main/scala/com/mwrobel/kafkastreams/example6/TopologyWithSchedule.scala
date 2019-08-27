@@ -1,7 +1,5 @@
 package com.mwrobel.kafkastreams.example6
 
-import java.time
-
 import com.mwrobel.kafkastreams.LeadManagementTopics
 import com.mwrobel.kafkastreams.example6.models._
 import com.mwrobel.kafkastreams.example6.transformers.{ScheduleContactRequests, StoreAndDeduplicateContactRequests}
@@ -12,7 +10,7 @@ import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{DateTime}
 
 import scala.concurrent.duration._
 
@@ -23,22 +21,6 @@ object StreamEnricher {
     def notNull: KStream[K, V] = {
       kstream.filter((_, v) => v != null)
     }
-
-    def transformValuesAndFilter[VR](
-        valueTransformerSupplier: ValueTransformerSupplier[V, VR],
-        stateStoreNames: String*
-    ): KStream[K, VR] =
-      kstream
-        .transformValues[VR](valueTransformerSupplier, stateStoreNames: _*)
-        .filter((_, v) => v != null)
-
-    def transformAndFilter[K1, V1](
-        transformerSupplier: TransformerSupplier[K, V, KeyValue[K1, V1]],
-        stateStoreNames: String*
-    ): KStream[K1, V1] =
-      kstream
-        .transform(transformerSupplier, stateStoreNames: _*)
-        .filter((_, v) => v != null)
   }
 }
 
@@ -91,12 +73,13 @@ object TopologyWithSchedule extends LazyLogging {
       Stores.keyValueStoreBuilder(storeSupplier, ContactRequestsStore.keySerde, ContactRequestsStore.valSerde)
     builder.addStateStore(storeBuilder)
 
-    val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, ContactRequest] {
-      override def get(): ValueTransformer[ContactRequest, ContactRequest] = new StoreAndDeduplicateContactRequests()
+    val saveAndDeduplicate = new ValueTransformerSupplier[ContactRequest, Option[ContactRequest]] {
+      override def get(): ValueTransformer[ContactRequest, Option[ContactRequest]] =
+        new StoreAndDeduplicateContactRequests()
     }
 
-    val delayAndSchedule = new TransformerSupplier[String, ContactRequest, KeyValue[String, ContactRequest]] {
-      override def get(): Transformer[String, ContactRequest, KeyValue[String, ContactRequest]] =
+    val delayAndSchedule = new TransformerSupplier[String, ContactRequest, KeyValue[String, Option[ContactRequest]]] {
+      override def get(): Transformer[String, ContactRequest, KeyValue[String, Option[ContactRequest]]] =
         new ScheduleContactRequests(1000, contactRequestScheduleSetter)
     }
 
@@ -105,8 +88,10 @@ object TopologyWithSchedule extends LazyLogging {
         (_, quotesCreatedEvent) => quotesCreatedEvent.userId,
         createContactRequest
       )
-      .transformValuesAndFilter(saveAndDeduplicate, ContactRequestsStore.name)
-      .transformAndFilter(delayAndSchedule, ContactRequestsStore.name)
+      .transformValues(saveAndDeduplicate, ContactRequestsStore.name)
+      .flatMapValues(v => v)
+      .transform(delayAndSchedule, ContactRequestsStore.name)
+      .flatMapValues(v => v)
       .to(LeadManagementTopics.contactRequests)
   }
 

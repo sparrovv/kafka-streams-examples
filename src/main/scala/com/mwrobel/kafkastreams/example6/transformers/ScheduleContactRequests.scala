@@ -10,7 +10,7 @@ import org.apache.kafka.streams.processor.{ProcessorContext, PunctuationType, Pu
 import org.joda.time.DateTime
 
 case class ScheduleContactRequests(scheduleInterval: Int = 10000, setScheduledAt: (ContactRequest) => ContactRequest)
-    extends Transformer[String, ContactRequest, KeyValue[String, ContactRequest]]
+    extends Transformer[String, ContactRequest, KeyValue[String, Option[ContactRequest]]]
     with LazyLogging {
   var contactRequestsStore: ContactRequestsStore.ContactRequests = _
 
@@ -31,17 +31,17 @@ case class ScheduleContactRequests(scheduleInterval: Int = 10000, setScheduledAt
             val updatedContactRequest = contactRequest.copy(forwarded = true)
             contactRequestsStore.upsert(updatedContactRequest)
 
-            context.forward(updatedContactRequest.userId, updatedContactRequest)
+            context.forward(updatedContactRequest.userId, Some(updatedContactRequest))
           }
         }
       }
     )
   }
 
-  override def transform(key: String, value: ContactRequest): KeyValue[String, ContactRequest] = {
+  override def transform(key: String, value: ContactRequest): KeyValue[String, Option[ContactRequest]] = {
     contactRequestsStore.upsert(setScheduledAt(value))
 
-    null
+    new KeyValue("x", None)
   }
 
   override def close(): Unit = {}
