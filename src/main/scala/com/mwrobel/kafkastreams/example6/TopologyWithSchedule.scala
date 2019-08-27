@@ -9,10 +9,38 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.kstream.{Transformer, TransformerSupplier, ValueTransformer, ValueTransformerSupplier}
 import org.apache.kafka.streams.scala.ImplicitConversions._
+import org.apache.kafka.streams.scala.kstream.KStream
 import org.apache.kafka.streams.scala.{Serdes, StreamsBuilder}
 import org.apache.kafka.streams.state.{KeyValueStore, Stores}
 import org.joda.time.{DateTime, DateTimeZone}
+
 import scala.concurrent.duration._
+
+object StreamEnricher {
+  implicit def toStreamEnricher[K, V](ks: KStream[K, V]) = new StreamEnricher(ks)
+
+  class StreamEnricher[K, V](kstream: KStream[K, V]) {
+    def notNull: KStream[K, V] = {
+      kstream.filter((_, v) => v != null)
+    }
+
+    def transformValuesAndFilter[VR](
+        valueTransformerSupplier: ValueTransformerSupplier[V, VR],
+        stateStoreNames: String*
+    ): KStream[K, VR] =
+      kstream
+        .transformValues[VR](valueTransformerSupplier, stateStoreNames: _*)
+        .filter((_, v) => v != null)
+
+    def transformAndFilter[K1, V1](
+        transformerSupplier: TransformerSupplier[K, V, KeyValue[K1, V1]],
+        stateStoreNames: String*
+    ): KStream[K1, V1] =
+      kstream
+        .transform(transformerSupplier, stateStoreNames: _*)
+        .filter((_, v) => v != null)
+  }
+}
 
 object ContactRequestsStore {
   val name = "contact_requests_store"
@@ -46,6 +74,7 @@ object ContactRequestsStore {
 
 object TopologyWithSchedule extends LazyLogging {
   import Serdes._
+  import StreamEnricher._
 
   def buildTopology()(implicit builder: StreamsBuilder): Unit = {
     implicit val contactDetailsSerde = ContactDetailsEntity.serde
@@ -76,10 +105,8 @@ object TopologyWithSchedule extends LazyLogging {
         (_, quotesCreatedEvent) => quotesCreatedEvent.userId,
         createContactRequest
       )
-      .transformValues(saveAndDeduplicate, ContactRequestsStore.name)
-      .filter((_, v) => v != null)
-      .transform(delayAndSchedule, ContactRequestsStore.name)
-      .filter((_, v) => v != null)
+      .transformValuesAndFilter(saveAndDeduplicate, ContactRequestsStore.name)
+      .transformAndFilter(delayAndSchedule, ContactRequestsStore.name)
       .to(LeadManagementTopics.contactRequests)
   }
 
