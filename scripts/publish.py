@@ -1,12 +1,13 @@
 import os
 import json
+import time
 
 
 def contact_detail():
     return {
         "id": "uid1",
         "name": "Michal",
-        "telephoneNumber": "+48324234"
+        "telephoneNumber": "+483242341"
     }
 
 
@@ -19,9 +20,18 @@ def quote_created():
     }
 
 
+def policy_purchased():
+    return {
+        "eventId": "PP-1",
+        "policyId": "1",
+        "userId": "uid1"
+    }
+
+
 events = [
+    # ("policy_purchased", json.dumps(policy_purchased())),
+    # ("contact_details_2p", json.dumps(contact_detail()), "uid1"),
     ("quotes_created_3p", json.dumps(quote_created()), "uid1"),
-    ("contact_details_2p", json.dumps(contact_detail()), "uid1"),
 ]
 
 
@@ -35,6 +45,7 @@ def kafkaProducerCmd(topic: str, msg: str, key=None):
 
 cmds = []
 for e in events:
+    time.sleep(5)
     if len(e) == 2:
         cmds.append(kafkaProducerCmd(e[0], e[1]))
     else:

@@ -1,4 +1,4 @@
-package com.mwrobel.kafkastreams.example_copartioning.models
+package com.mwrobel.kafkastreams.example_commands.models
 
 import com.mwrobel.kafkastreams.serdes.JsonSerde
 
@@ -24,6 +24,24 @@ case class LeadActioned(
     userId: String
 ) extends DomainEvent
 
+case class PolicyPurchased(
+    eventId: String,
+    policyId: String,
+    userId: String
+) extends DomainEvent
+
+case class ContactRequestCreated(
+    userId: String
+) extends DomainEvent
+
+case class ContactRequestPrioritized(
+    userId: String
+) extends DomainEvent
+
+case class ContactRequestRemoved(
+    userId: String
+) extends DomainEvent
+
 object ContactDetailsEntity {
   val serde: JsonSerde[ContactDetailsEntity] = new JsonSerde[ContactDetailsEntity]()
 }
@@ -37,4 +55,18 @@ object LeadActioned {
 }
 object LeadScored {
   val serde: JsonSerde[LeadScored] = new JsonSerde[LeadScored]()
+}
+
+object PolicyPurchased {
+  val serde: JsonSerde[PolicyPurchased] = new JsonSerde[PolicyPurchased]()
+}
+
+object ContactRequestCreated {
+  val serde: JsonSerde[ContactRequestCreated] = new JsonSerde[ContactRequestCreated]()
+}
+object ContactRequestPrioritized {
+  val serde: JsonSerde[ContactRequestPrioritized] = new JsonSerde[ContactRequestPrioritized]()
+}
+object ContactRequestRemoved {
+  val serde: JsonSerde[ContactRequestRemoved] = new JsonSerde[ContactRequestRemoved]()
 }

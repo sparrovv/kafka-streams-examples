@@ -18,7 +18,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ADVERTISED_PORT: 9092
       KAFKA_ADVERTISED_HOST_NAME: "kafka"
-      KAFKA_CREATE_TOPICS: "contact_details_2p:2:1,quotes_created_3p:3:1"
+      KAFKA_CREATE_TOPICS: "contact_details_2p:2:1,quotes_created_3p:3:1,policy_purchased:1:1,dialer_events:1:1,internal_app_commands:1:1"
 
   kafkadrop:
     image: obsidiandynamics/kafdrop
