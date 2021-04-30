@@ -16,6 +16,7 @@ object TopologyWithStateStore extends LazyLogging {
 
     val quotesCreated = builder
       .stream[String, QuotesCreated](LeadManagementTopics.quotesCreated)
+
     val contactDetails = builder
       .globalTable[String, ContactDetailsEntity](LeadManagementTopics.contactDetailsEntity)
 
